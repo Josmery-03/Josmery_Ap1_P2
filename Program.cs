@@ -1,3 +1,5 @@
+using Microsoft.EntityFrameworkCore;
+using Josmery_Ap1_P2.Context;
 using Josmery_Ap1_P2.Components;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -5,6 +7,9 @@ var builder = WebApplication.CreateBuilder(args);
 // Add services to the container.
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
+
+var conStr = builder.Configuration.GetConnectionString("ConStr");
+builder.Services.AddDbContextFactory<Contexto>(o => o.UseSqlite(conStr));
 
 var app = builder.Build();
 
