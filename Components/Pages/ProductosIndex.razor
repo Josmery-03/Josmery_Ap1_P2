@@ -1,0 +1,148 @@
+﻿@page "/Productos/Index"
+@inject VentasService ventasService
+@inject NavigationManager Navigation
+@rendermode InteractiveServer
+
+<PageTitle>Consulta de Productos</PageTitle>
+
+<div class="container-fluid mt-4">
+    <div class="card shadow-sm">
+        <div class="card-header d-flex justify-content-between align-items-center bg-light">
+            <h5 class="card-title mb-0">Consulta de Productos (Inventario)</h5>
+            <button type="button" class="btn btn-outline-primary" @onclick="CargarProductos">
+                <span class="bi bi-arrow-clockwise"></span>
+                Refrescar
+            </button>
+        </div>
+
+        @*Formulario*@
+        <div class="card-body">
+
+            @*Labels*@
+            <div class="row">
+                <div class="col-3">
+                    <label class="form-label" for="Filtro">
+                        <strong>Filtrar por</strong>
+                    </label>
+                </div>
+
+                <div class="col-4">
+                    <label class="form-label" for="valorFiltro">
+                        <strong>Búsqueda</strong>
+                    </label>
+                </div>
+            </div>
+
+            @*Inputs y botones*@
+            <div class="row mb-3">
+                @*Filtro*@
+                <div class="col-3">
+                    <select id="Filtro" class="form-select" @bind="filtro">
+                        <option value="">Elija una opción</option>
+                        <option value="ProductoId">ProductoId</option>
+                        <option value="Descripcion">Descripción</option>
+                    </select>
+                </div>
+
+                @*Busqueda*@
+                <div class="col-4">
+                    <div class="input-group">
+                        <input id="valorFiltro"
+                               class="form-control"
+                               @bind="valorFiltro"
+                               placeholder="Buscar" />
+
+                        <button type="button"
+                                class="btn btn-outline-primary"
+                                @onclick="Buscar">
+                            Buscar
+                        </button>
+                    </div>
+                </div>
+
+                @*Restablecer*@
+                <div class="col-auto">
+                    <button type="button"
+                            class="btn btn-outline-secondary"
+                            @onclick="Restablecer">
+                        Restablecer
+                    </button>
+                </div>
+            </div>
+
+            @*Tabla*@
+            <div class="table-responsive">
+                <table class="table table-striped table-hover table-bordered align-middle">
+                    <thead class="table-light text-center">
+                        <tr>
+                            <th>ProductoId</th>
+                            <th>Descripción</th>
+                            <th>Precio</th>
+                            <th>Stock</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var producto in listaProductos)
+                        {
+                            <tr>
+                                <td class="text-center">@producto.ProductoId</td>
+                                <td>@producto.Descripcion</td>
+                                <td class="text-end">@producto.Precio.ToString("N2")</td>
+                                <td class="text-center fw-bold">@producto.Stock</td>
+                            </tr>
+                        }
+                    </tbody>
+                    <tfoot class="table-light fw-bold">
+                        <tr>
+                            <td colspan="3">Conteo de productos: @listaProductos.Count</td>
+                            <td class="text-center">Total Stock: @listaProductos.Sum(p => p.Stock)</td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    public string? filtro { get; set; }
+    public string? valorFiltro { get; set; }
+    private List<Productos> listaProductos = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await CargarProductos();
+    }
+
+    private async Task CargarProductos()
+    {
+        listaProductos = await ventasService.ListarProductos();
+    }
+
+    private async Task Buscar()
+    {
+        var todos = await ventasService.ListarProductos();
+
+        if (string.IsNullOrWhiteSpace(filtro) || string.IsNullOrWhiteSpace(valorFiltro))
+        {
+            listaProductos = todos;
+            return;
+        }
+
+        if (filtro == "ProductoId" && int.TryParse(valorFiltro, out int id))
+        {
+            listaProductos = todos.Where(p => p.ProductoId == id).ToList();
+        }
+        else if (filtro == "Descripcion")
+        {
+            listaProductos = todos.Where(p => p.Descripcion.Contains(valorFiltro.Trim(), StringComparison.OrdinalIgnoreCase)).ToList();
+        }
+    }
+
+    private async Task Restablecer()
+    {
+        filtro = string.Empty;
+        valorFiltro = string.Empty;
+        await CargarProductos();
+    }
+}

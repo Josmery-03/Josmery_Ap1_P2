@@ -1,0 +1,205 @@
+﻿@page "/Ventas/Index"
+@inject VentasService ventasService
+@inject NavigationManager Navigation
+@rendermode InteractiveServer
+
+<PageTitle>Consulta de Ventas</PageTitle>
+
+<div class="container-fluid mt-4">
+    <div class="card shadow-sm">
+        <div class="card-header d-flex justify-content-between align-items-center bg-light">
+            <h5 class="card-title mb-0">Consulta de Ventas</h5>
+            <a class="btn btn-primary" href="/Ventas/Create">
+                <span class="bi bi-plus-square"></span>
+                Crear
+            </a>
+        </div>
+
+        @*Formulario*@
+        <div class="card-body">
+
+            @*Labels*@
+            <div class="row">
+                <div class="col-2">
+                    <label class="form-label" for="Filtro">
+                        <strong>Filtrar por</strong>
+                    </label>
+                </div>
+
+                <div class="col-4">
+                    <label class="form-label" for="valorFiltro">
+                        <strong>Búsqueda</strong>
+                    </label>
+                </div>
+
+                <div class="col-2">
+                    <label class="form-label" for="fechaDesde">
+                        <strong>Fecha Desde</strong>
+                    </label>
+                </div>
+
+                <div class="col-2">
+                    <label class="form-label" for="fechaHasta">
+                        <strong>Fecha Hasta</strong>
+                    </label>
+                </div>
+            </div>
+
+            @*Inputs y botones*@
+            <div class="row mb-3">
+                @*Filtro*@
+                <div class="col-2">
+                    <select id="Filtro" class="form-select" @bind="filtro">
+                        <option value="">Elija una opción</option>
+                        <option value="VentaId">VentaId</option>
+                        <option value="Concepto">Concepto</option>
+                    </select>
+                </div>
+
+                @*Busqueda*@
+                <div class="col-4">
+                    <div class="input-group">
+                        <input id="valorFiltro"
+                               class="form-control"
+                               @bind="valorFiltro"
+                               placeholder="Buscar" />
+
+                        <button type="button"
+                                class="btn btn-outline-primary"
+                                @onclick="Buscar">
+                            Buscar
+                        </button>
+                    </div>
+                </div>
+
+                @*Fecha Desde*@
+                <div class="col-2">
+                    <input id="fechaDesde"
+                           type="date"
+                           class="form-control"
+                           @bind="fechaDesde" />
+                </div>
+
+                @*Fecha Hasta*@
+                <div class="col-2">
+                    <input id="fechaHasta"
+                           type="date"
+                           class="form-control"
+                           @bind="fechaHasta" />
+                </div>
+
+                @*Restablecer*@
+                <div class="col-auto">
+                    <button type="button"
+                            class="btn btn-outline-secondary"
+                            @onclick="Restablecer">
+                        Restablecer
+                    </button>
+                </div>
+            </div>
+
+            @if (!string.IsNullOrEmpty(mensajeError))
+            {
+                <div class="alert alert-danger">@mensajeError</div>
+            }
+
+            @*Tabla*@
+            <div class="table-responsive">
+                <table class="table table-striped table-hover table-bordered align-middle">
+                    <thead class="table-light text-center">
+                        <tr>
+                            <th>VentaId</th>
+                            <th>Fecha</th>
+                            <th>Observación</th>
+                            <th>Total</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @if (listaVentas.Count == 0)
+                        {
+                            <tr>
+                                <td colspan="5" class="text-center text-muted">
+                                    No hay registros disponibles.
+                                </td>
+                            </tr>
+                        }
+                        else
+                        {
+                            @foreach (var venta in listaVentas)
+                            {
+                                <tr>
+                                    <td class="text-center">@venta.VentaId</td>
+                                    <td class="text-center">@venta.Fecha.ToString("dd/MM/yyyy")</td>
+                                    <td>@venta.Observacion</td>
+                                    <td class="text-end">@venta.Total.ToString("N2")</td>
+                                    <td class="text-center">
+                                        <a href="/Ventas/Edit/@venta.VentaId" class="btn btn-outline-primary btn-sm">
+                                            <span class="bi bi-pencil-square"></span> Editar
+                                        </a>
+                                    </td>
+                                </tr>
+                            }
+                        }
+                    </tbody>
+                    <tfoot class="table-light fw-bold">
+                        <tr>
+                            <td colspan="2">Conteo de registros: @listaVentas.Count</td>
+                            <td class="text-end">Total Vendido:</td>
+                            <td class="text-end">@listaVentas.Sum(v => v.Total).ToString("N2")</td>
+                            <td></td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    public string? filtro { get; set; }
+    public string? valorFiltro { get; set; }
+    public DateTime? fechaDesde { get; set; }
+    public DateTime? fechaHasta { get; set; }
+    private List<Ventas> listaVentas = new();
+    private string mensajeError = string.Empty;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await Buscar();
+    }
+
+    private async Task Buscar()
+    {
+        mensajeError = string.Empty;
+
+        int.TryParse(valorFiltro, out int idBuscado);
+
+        var resultado = await ventasService.GetList(v =>
+            (string.IsNullOrWhiteSpace(filtro) || string.IsNullOrWhiteSpace(valorFiltro) ||
+                (filtro == "VentaId" && v.VentaId == idBuscado) ||
+                (filtro == "Concepto" && v.Observacion.ToLower().Contains(valorFiltro.Trim().ToLower()))) &&
+            (!fechaDesde.HasValue || v.Fecha.Date >= fechaDesde.Value.Date) &&
+            (!fechaHasta.HasValue || v.Fecha.Date <= fechaHasta.Value.Date)
+        );
+
+        if (resultado.IsSuccess && resultado.Value != null)
+        {
+            listaVentas = resultado.Value;
+        }
+        else
+        {
+            listaVentas = new();
+            mensajeError = resultado.Error.ToString() ?? "Error al consultar las ventas.";
+        }
+    }
+
+    private async Task Restablecer()
+    {
+        filtro = string.Empty;
+        valorFiltro = string.Empty;
+        fechaDesde = null;
+        fechaHasta = null;
+        await Buscar();
+    }
+}
