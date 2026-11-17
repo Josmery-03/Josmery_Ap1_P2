@@ -1,6 +1,7 @@
-using Microsoft.EntityFrameworkCore;
-using Josmery_Ap1_P2.Context;
 using Josmery_Ap1_P2.Components;
+using Josmery_Ap1_P2.Context;
+using Josmery_Ap1_P2.Services;
+using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -10,6 +11,8 @@ builder.Services.AddRazorComponents()
 
 var conStr = builder.Configuration.GetConnectionString("ConStr");
 builder.Services.AddDbContextFactory<Contexto>(o => o.UseSqlite(conStr));
+
+builder.Services.AddScoped<VentasService>();
 
 var app = builder.Build();
 
